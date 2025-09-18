@@ -1,0 +1,15 @@
+{
+  "name": "websocket-client-app",
+  "version": "1.0.0",
+  "description": "A simple WebSocket client application for P2P architecture.",
+  "main": "src/client.js",
+  "scripts": {
+    "start": "live-server src",
+    "build": "echo 'Build step not defined'"
+  },
+  "dependencies": {
+    "websocket": "^1.0.34"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}

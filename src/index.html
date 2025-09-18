@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+        }
+        #input {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket desde el navegador</h1>
+    <div id="status">Desconectado</div>
+    <div id="messages"></div>
+    <input id="input" type="text" placeholder="Escribe un mensaje..." />
+    <button id="sendBtn">Enviar</button>
+    <script src="client.js"></script>
+</body>
+</html>
