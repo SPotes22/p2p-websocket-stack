@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>PiChat - Inicio</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; display: flex; height: 100vh; }
+        .sidebar { width: 200px; background: #2f3136; color: white; padding: 20px; display: flex; flex-direction: column; }
+        .sidebar h2 { margin-top: 0; }
+        .sidebar a { color: #b9bbbe; text-decoration: none; padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+        .sidebar a:hover { background: #393c43; }
+        .content { flex-grow: 1; padding: 20px; background: #f8f9fa; }
+        .user-info { margin-top: auto; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>PiChat MVP</h2>
+        <a href="{{ url_for('inicio') }}">🏠 Inicio</a>
+        <a href="{{ url_for('chat') }}">💬 Chat</a>
+        <a href="{{ url_for('listar') }}">📁 Listar Archivos</a>
+        {% if current_user.rol != 'usuario' %}
+        <a href="{{ url_for('subir') }}">⬆️ Subir Archivo</a>
+        {% endif %}
+        <div class="user-info">
+            <p>Usuario: <strong>{{ current_user.id }}</strong></p>
+            <p>Rol: <strong>{{ current_user.rol }}</strong></p>
+            <a href="{{ url_for('logout') }}">Cerrar Sesión</a>
+        </div>
+    </div>
+    <div class="content">
+        <h1>Bienvenido a PiChat</h1>
+        <p>Selecciona una opción del menú de la izquierda para comenzar.</p>
+        <p>"New chat 👋, New name. 📛"</p>
+    </div>
+</body>
+</html>
