@@ -1,0 +1,8 @@
+*.env
+env
+venv
+venv/
+/venv
+*.pyc
+*.txt
+
