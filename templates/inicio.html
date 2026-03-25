@@ -18,10 +18,6 @@
         <h2>PiChat MVP</h2>
         <a href="{{ url_for('inicio') }}">🏠 Inicio</a>
         <a href="{{ url_for('chat') }}">💬 Chat</a>
-        <a href="{{ url_for('listar') }}">📁 Listar Archivos</a>
-        {% if current_user.rol != 'usuario' %}
-        <a href="{{ url_for('subir') }}">⬆️ Subir Archivo</a>
-        {% endif %}
         <div class="user-info">
             <p>Usuario: <strong>{{ current_user.id }}</strong></p>
             <p>Rol: <strong>{{ current_user.rol }}</strong></p>
