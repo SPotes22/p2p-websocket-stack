@@ -261,6 +261,18 @@
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #7ab0d9; border-radius: 3px; }
+	#image-button {
+    background: white;
+    border: 2px solid #2a6f97;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    cursor: pointer;
+    font-size: 18px;
+}
+#image-button:hover {
+    background: #d4e4f0;
+}
     </style>
 </head>
 <body>
@@ -300,9 +312,22 @@
         </div>
 
         <div id="input-area">
-            <input type="text" id="message-input" placeholder="Escribe un mensaje..." autocomplete="off" disabled>
-            <button id="send-button" disabled>Enviar</button>
-        </div>
+        	<div id="input-area">
+
+    <input type="file" id="image-input" accept="image/*" style="display:none">
+
+    <button id="image-button">📷</button>
+
+    <input type="text"
+           id="message-input"
+           placeholder="Escribe un mensaje..."
+           autocomplete="off"
+           disabled>
+
+    <button id="send-button" disabled>Enviar</button>
+
+</div>     
+	</div>
     </div>
 </div>
 
@@ -437,33 +462,15 @@ socket.on('mensaje_recibido', (msg) => {
         messages.push(msg);
         appendBubble(msg);          // agregar directamente sin re-render completo
         scrollBottom();
+        document.getElementById('message-input').value = '';
+        cerrarReply();
     }
     // Si no está en esa conv, podríamos mostrar notificación (futuro)
 });
 
 // Confirmación de que el servidor recibió y entregó nuestro mensaje
 // El servidor nos devuelve el objeto completo para mostrarlo nosotros también
-socket.on('mensaje_enviado', (msg) => {
-    // Quitar mensaje temporal si existe
-    const temp = document.getElementById('msg-temp');
-    if (temp) temp.remove();
 
-    // Agregar mensaje definitivo al array y al DOM
-    messages.push(msg);
-    appendBubble(msg);
-    scrollBottom();
-
-    // Limpiar input y reply
-    document.getElementById('message-input').value = '';
-    cerrarReply();
-});
-
-socket.on('error', ({ msg }) => {
-    // Quitar temporal y mostrar error
-    const temp = document.getElementById('msg-temp');
-    if (temp) temp.remove();
-    appendSystemMsg('❌ ' + msg);
-});
 
 // ===================== RENDER =====================
 
@@ -508,7 +515,10 @@ function appendBubble(msg, scroll = true) {
     row.innerHTML = `
         <div class="bubble">
             ${replyHtml}
-            <div class="msg-text">${escapeHtml(msg.texto)}</div>
+            <div class="msg-text">
+    ${msg.texto ? escapeHtml(msg.texto) : ''}
+    ${msg.imagen ? `<img src="/cuarentena/${msg.imagen}" style="max-width:220px;border-radius:10px;margin-top:5px;">` : ''}
+</div>
             <div class="msg-meta">${msg.tiempo || ''}</div>
         </div>
     `;
@@ -616,6 +626,49 @@ function escapeHtml(str) {
 
 // Ping cada 30s para mantener el peer "vivo" en el servidor
 setInterval(() => socket.emit('ping'), 30000);
+
+
+document.getElementById('image-button').onclick = () => {
+    document.getElementById('image-input').click();
+};
+
+
+document.getElementById('image-input').onchange = async function () {
+
+    if (!selectedPeer) return;
+
+    const file = this.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('imagen', file);
+
+    try {
+
+        const response = await fetch('/upload_imagen', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.archivo) {
+
+            socket.emit('mensaje_privado', {
+                destinatario_hash: selectedPeer.hash,
+                texto: '',
+                imagen: data.archivo
+            });
+
+        }
+
+    } catch (err) {
+
+        appendSystemMsg('❌ Error subiendo imagen');
+
+    }
+
+};
 </script>
 </body>
 </html>

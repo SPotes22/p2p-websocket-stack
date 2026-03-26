@@ -8,6 +8,7 @@ from flask_socketio import SocketIO, emit
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from flask_argon2 import Argon2
+from flask import send_from_directory
 
 # --- CONFIGURACIÓN INICIAL ---
 app = Flask(__name__)
@@ -30,6 +31,18 @@ print("✅ Configuración inicial completada...")
 UPLOAD_FOLDER = './cuarentena'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
+@app.route('/cuarentena/<filename>')
+@login_required
+def servir_archivo(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # --- USUARIOS BASE (cargados desde env) ---
 users = {
@@ -150,29 +163,39 @@ def chat():
 
 @socketio.on('connect')
 def handle_connect():
+
     if not current_user.is_authenticated:
-        return False   # rechazar conexión no autenticada
+        return False
 
     mi_hash = generar_peer_hash(current_user.id)
 
-    # Registrar / actualizar peer
     peers_conectados[mi_hash] = {
-        "nombre":      current_user.id,
-        "ip":          request.remote_addr,
-        "session_id":  request.sid,
+        "nombre": current_user.id,
+        "ip": request.remote_addr,
+        "session_id": request.sid,
         "ultimo_seen": time.time(),
     }
-    print(f"🔗 Conectado: {current_user.id} ({mi_hash}) sid={request.sid}")
 
-    # Enviar a TODOS la lista actualizada (incluido el recién conectado)
-    socketio.emit('peer_list_actualizada', {
-        'peers': peers_para(mi_hash),
-        'yo':    mi_hash,
-    }, room=request.sid)                        # al que se conectó: su lista
+    print(f"🔗 Conectado: {current_user.id} ({mi_hash})")
 
-    emit('peer_list_actualizada', {             # a los demás: lista sin él
-        'peers': peers_para(mi_hash),
-    }, broadcast=True, include_self=False)
+    # enviar lista al nuevo peer
+    emit(
+        'peer_list_actualizada',
+        {
+            'peers': peers_para(mi_hash),
+            'yo': mi_hash,
+        }
+    )
+
+    # avisar a TODOS los demás que apareció nuevo peer
+    socketio.emit(
+        'peer_nuevo',
+        {
+            'hash': mi_hash,
+            'nombre': current_user.id
+        },
+        include_self=False
+    )
 
 
 @socketio.on('disconnect')
@@ -217,12 +240,14 @@ def handle_mensaje_privado(data):
     if not current_user.is_authenticated:
         return
 
+   
     emisor_hash       = generar_peer_hash(current_user.id)
     destinatario_hash = data.get('destinatario_hash', '')
     texto             = data.get('texto', '').strip()
     respondiendo_a    = data.get('respondiendo_a')
-
-    if not texto:
+    imagen = data.get('imagen')
+    
+    if not texto and not imagen: 
         return
 
     if destinatario_hash not in peers_conectados:
@@ -246,6 +271,7 @@ def handle_mensaje_privado(data):
         'timestamp':       now,
         'tiempo':          time.strftime('%H:%M:%S', time.localtime(now)),
         'respondiendo_a':  respondiendo_a,
+        'imagen': imagen,
     }
 
     # Guardar en historial compartido de la conversación
@@ -266,7 +292,7 @@ def handle_mensaje_privado(data):
         return
 
     # Confirmar al emisor con el objeto completo (para que lo muestre en su UI)
-    emit('mensaje_enviado', mensaje)
+    emit('mensaje_recibido', mensaje)
 
 
 @socketio.on('obtener_historial')
@@ -278,6 +304,33 @@ def handle_obtener_historial(data):
     clave     = conv_key(mi_hash, peer_hash)
     historial = mensajes_historial.get(clave, [])
     emit('historial_mensajes', {'mensajes': historial})
+
+
+@app.route('/upload_imagen', methods=['POST'])
+@login_required
+def upload_imagen():
+    if 'imagen' not in request.files:
+        return {'error': 'No se envió archivo'}, 400
+
+    file = request.files['imagen']
+
+    if file.filename == '':
+        return {'error': 'Nombre inválido'}, 400
+
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+
+        unique_name = f"{uuid.uuid4()}_{filename}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_name)
+
+        file.save(filepath)
+
+        return {
+            'mensaje': 'Imagen subida correctamente',
+            'archivo': unique_name
+        }
+
+    return {'error': 'Formato no permitido'}, 400
 
 
 # ============= INICIO =============
